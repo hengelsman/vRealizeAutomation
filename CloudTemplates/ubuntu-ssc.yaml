@@ -20,7 +20,7 @@ inputs:
     default: VMware01!
 resources:
   VM:
-    type: Cloud.Machine
+    type: Cloud.vSphere.Machine
     properties:
       name: '${env.deploymentName}'
       imageRef: 'http://192.168.1.10/ISO/Linux/bionic-server-cloudimg-amd64.ova'
