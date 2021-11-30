@@ -1,0 +1,67 @@
+inputs:
+  vmflavor:
+    type: string
+    default: tiny
+    enum:
+      - tiny
+      - small
+      - medium
+  vmnet:
+    type: string
+    default: vmnet2
+  vmnotes:
+    type: string
+    default: Deployed by vRA
+  vmuser:
+    type: string
+    default: henk
+  vmpass:
+    type: string
+    encrypted: true
+    default: VMware01!
+resources:
+  VM:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: '${env.deploymentName}'
+      imageRef: 'http://192.168.1.10/ISO/Linux/bionic-server-cloudimg-amd64.ova'
+      flavor: tiny
+      vmnotes: '${input.vmnotes}'
+      remoteAccess:
+        authentication: usernamePassword
+        username: '${input.vmuser}'
+        password: '${input.vmpass}'
+      networks:
+        - network: '${resource.Network.id}'
+          assignment: dynamic
+      tags:
+        - key: vraserver
+          value: 'true'
+        - key: ServerType
+          value: Test
+      saltConfiguration:
+        masterId: saltstack_enterprise_installer
+        minionId: '${env.deploymentName}'
+        saltEnvironment: sse
+        stateFiles:
+          - /apache/init.sls
+      cloudConfig: |
+        hostname: '${env.deploymentName}'
+        ssh_pwauth: yes
+        chpasswd:
+          list: |
+            ${input.vmuser}:${input.vmpass}
+          expire: false
+        users:
+          - default
+          - name: ${input.vmuser}
+            lock_passwd: false
+            sudo: ['ALL=(ALL) NOPASSWD:ALL']
+            groups: [wheel, sudo, admin]
+            shell: '/bin/bash'
+  Network:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: 'vmnet:${input.vmnet}'
