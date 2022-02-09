@@ -1,0 +1,114 @@
+inputs:
+  vmcloudzone:
+    type: string
+    title: Cloud Zone
+    default: wrkld
+    enum:
+      - infra
+      - xray
+      - zulu
+      - wrkld
+  vmflavor:
+    type: string
+    title: Size
+    default: tiny
+    enum:
+      - tiny
+      - small
+      - medium
+  vmnet:
+    type: string
+    title: Network
+    enum:
+      - vmnet1
+      - vmnet2
+      - vmnet3
+    default: vmnet1
+  vmnotes:
+    type: string
+    title: Notes
+    default: Deployed by vra.infrajedi.local
+  vmuser:
+    type: string
+    title: Username
+    default: henk
+  vmpass:
+    type: string
+    title: Password
+    encrypted: true
+  vmdnsdomain:
+    type: string
+    title: DNS Domain
+    enum:
+      - .infrajedi.local
+      - .domain.local
+    default: .infrajedi.local
+  vmCount:
+    type: integer
+    title: Number of VMs
+    minimum: 1
+    maximum: 3
+    default: 1
+  pgDeploy:
+    type: object
+    title: Deployment Properties
+    $ref: /ref/property-groups/pgDeploy
+resources:
+  VM:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: '${propgroup.pgGuestOS.linux + input.pgDeploy.vmEnvironment + input.pgDeploy.vmServertype + input.pgDeploy.vmLocationcode}'
+      image: photon4-rev2
+      #imageRef: Linux / photon4-rev2
+      flavor: '${input.vmflavor}'
+      #cpuCount: 1
+      #totalMemoryMB: 1
+      count: '${input.vmCount}'
+      ignoreActiveDirectory: true
+      vmnotes: '${input.vmnotes}'
+      remoteAccess:
+        authentication: usernamePassword
+        username: '${input.vmuser}'
+        password: '${input.vmpass}'
+      constraints:
+        - tag: 'cz:${input.vmcloudzone}'
+      networks:
+        - network: '${resource.Network.id}'
+          assignment: dynamic
+      tags:
+        - key: vraserver
+          value: vra.infrajedi.local
+        - key: ServerType
+          value: '${input.pgDeploy.vmServertype}'
+        - key: vraCloudTemplate
+          value: '${env.blueprintName}'
+      cloudConfig: |
+        #preserve_hostname: false
+        #hostname: ${self.resourceName}
+        fqdn: ${self.resourceName+input.vmdnsdomain} 
+        ssh_pwauth: yes
+        chpasswd:
+          list: |
+            ${input.vmuser}:${input.vmpass}
+          expire: false
+        users:
+          - default
+          - name: ${input.vmuser}
+            lock_passwd: false
+            sudo: ['ALL=(ALL) NOPASSWD:ALL']
+            groups: [wheel, sudo, admin]
+            shell: '/bin/bash'
+          - name: root
+            lock_passwd: false
+            hashed_passwd: ${secret.PhotonRoot}
+        runcmd:
+          - echo [DHCPv4] >> /etc/systemd/network/99-dhcp-en.network
+          - echo UseDomains=yes >> /etc/systemd/network/99-dhcp-en.network
+          - #echo Domains=${input.vmdnsdomain} >> /etc/systemd/network/99-dhcp-en.network
+          - systemctl restart systemd-networkd systemd-resolve
+  Network:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: 'vmnet:${input.vmnet}'
