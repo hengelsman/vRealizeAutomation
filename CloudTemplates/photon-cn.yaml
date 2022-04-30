@@ -1,3 +1,5 @@
+name: photon-cn88
+version: 1
 inputs:
   vmflavor:
     type: string
@@ -65,24 +67,19 @@ inputs:
     type: object
     title: Deployment Properties
     $ref: /ref/property-groups/pgDeploy
-#vmtestprop:
-#  type: string
-#  title: vmtestprop
-#  default: 1234
 resources:
   VM:
     type: Cloud.vSphere.Machine
     metadata:
       layoutPosition:
         - 0
-        - 1
+        - 0
     properties:
-      name: ${propgroup.pgGuestOS.linux + input.pgDeploy.vmEnvironment + input.pgDeploy.vmServertype + input.pgDeploy.vmLocationcode}
+      name: vl${input.pgDeploy.vmEnvironment + input.pgDeploy.vmServertype + input.pgDeploy.vmLocationcode}
       imageRef: ${input.vmimage}
       flavor: ${input.vmflavor}
       count: ${input.vmcount}
-      #vmtestprop: ${input.vmtestprop}
-      #ignoreActiveDirectory: true
+      ignoreActiveDirectory: true
       #activeDirectory:
       #  relativeDN: OU=Install,OU=Servers
       #  finalRelativeDN: OU=General,OU=Servers
